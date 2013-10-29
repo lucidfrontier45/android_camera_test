@@ -41,7 +41,7 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
 		float ratio = this.mPreviewSize.width
 				/ (float) this.mPreviewSize.height;
-     	height = (int) (width * ratio);
+		height = (int) (width * ratio);
 
 		Log.d(TAG, String.format("Modified Size is %d x %d", width, height));
 		LayoutParams params = this.getLayoutParams();
@@ -69,7 +69,7 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 	}
 
 	private Camera.Size get4x3PreviewSize(Camera camera) {
-		List<Size> sizes = camera.getParameters().getSupportedPictureSizes();
+		List<Size> sizes = camera.getParameters().getSupportedPreviewSizes();
 		Camera.Size max_size = null;
 		float ratio;
 		for (Camera.Size size : sizes) {
@@ -81,7 +81,7 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 					// skip this resolution because this is at least 16:9
 					continue;
 				}
-			}else if (ratio < 1.334) {
+			} else if (ratio < 1.334) {
 				if (this.aspect_ratio.equals("16:9")) {
 					// skip this resolution because this is at least 16:9
 					continue;
@@ -93,10 +93,10 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 				max_size = size;
 			}
 		}
-		
+
 		ratio = max_size.width / (float) max_size.height;
-		Log.d(TAG, String.format("MaxSize %d x %d ratio = %f",
-				max_size.width, max_size.height, ratio));
+		Log.d(TAG, String.format("MaxSize %d x %d ratio = %f", max_size.width,
+				max_size.height, ratio));
 		return max_size;
 	}
 
@@ -104,14 +104,26 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 		return mCamera;
 	}
 
+	private int getMinPreviewFPS(Camera.Parameters params) {
+		List<Integer> fps_list = params.getSupportedPreviewFrameRates();
+		int min_fps = 10000;
+		for (int fps : fps_list) {
+			Log.d(TAG, String.format("%d is available fps", fps));
+			if (fps < min_fps) {
+				min_fps = fps;
+			}
+		}
+		return min_fps;
+	}
+
 	public void setmCamera(Camera camera) {
 		this.mCamera = camera;
 		this.mCamera.setDisplayOrientation(90);
 		this.mPreviewSize = this.get4x3PreviewSize(camera);
 		Camera.Parameters params = this.mCamera.getParameters();
-//		params.setPreviewSize(this.mPreviewSize.width, this.mPreviewSize.height);
-//		this.mCamera.setParameters(params);
-		this.mPreviewSize = params.getPreviewSize();
+		params.setPreviewSize(this.mPreviewSize.width, this.mPreviewSize.height);
+		params.setPreviewFrameRate(this.getMinPreviewFPS(params));
+		this.mCamera.setParameters(params);
 		if (this.getHolder() != null) {
 			try {
 				this.mCamera.setPreviewDisplay(this.getHolder());
