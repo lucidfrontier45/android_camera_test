@@ -7,6 +7,7 @@ import android.content.Context;
 import android.hardware.Camera;
 import android.hardware.Camera.Size;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup.LayoutParams;
@@ -133,5 +134,10 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 			}
 		}
 	}
-
+	
+	@Override
+    public boolean onTouchEvent(MotionEvent event) {
+		this.mCamera.autoFocus(null);
+		return true;
+	}
 }
