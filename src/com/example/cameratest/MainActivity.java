@@ -50,62 +50,62 @@ public class MainActivity extends Activity {
 				// TODO Auto-generated method stub
 				MainActivity parent = MainActivity.this;
 				Camera camera = parent.mCamera;
-				/*
-				 * if (parent.cb_set) { camera.setPreviewCallback(null);
-				 * parent.cb_set = false; } else {
-				 * camera.setPreviewCallback(parent.cb_preview); parent.cb_set =
-				 * true; }
-				 */
-				camera.takePicture(null, null, cb_picture);
+				if (parent.cb_set) {
+					camera.setPreviewCallback(null);
+					parent.cb_set = false;
+				} else {
+					camera.setPreviewCallback(parent.cb_preview);
+					parent.cb_set = true;
+				}
+				// camera.takePicture(null, null, cb_picture);
 			}
 		});
 
 		mResultTextView = (TextView) this.findViewById(R.id.result_textview);
 
 	}
-	
+
 	private void setOptimalPictureSize() {
 
 		Parameters params = this.mCamera.getParameters();
 		List<Size> sizes = params.getSupportedPictureSizes();
-		
-        double targetRatio = (double)4 / 3;
-      //  int minSize = 1000;
-        int minWdith = 1000;
-        int minHeight = 1000;
-        boolean bIsVailble = false;
-        Size size_out = sizes.get(0);
-        size_out.width = 10000;
-        size_out.height = 10000;
-       
-        for (Size size : sizes) {
-        	/*
-            double ratio = (double) size.width / size.height;
-            int gasosu = size.width * size.height;
-            if (gasosu < (300 * 10000) && Math.abs(ratio - targetRatio) < 0.1) {
-                 return size;
-            }
-            */
-            
-            if (size.width > minWdith && size.height > minHeight) {
 
-            	if ( size.width < size_out.width && size.height < size_out.height ){
-            		size_out = size;
-            	}
-            	bIsVailble = true;
-            }
-            
-        }
-       
-        if ( bIsVailble ){
-        	params.setPictureSize(size_out.width, size_out.height);
-        }else{
-        	params.setPictureSize(sizes.get(0).width, sizes.get(0).height);
-        }
+		double targetRatio = (double) 4 / 3;
+		// int minSize = 1000;
+		int minWdith = 1000;
+		int minHeight = 1000;
+		boolean bIsVailble = false;
+		Size size_out = sizes.get(0);
+		size_out.width = 10000;
+		size_out.height = 10000;
 
-        this.mCamera.setParameters(params);
-        
-    }
+		for (Size size : sizes) {
+			/*
+			 * double ratio = (double) size.width / size.height; int gasosu =
+			 * size.width * size.height; if (gasosu < (300 * 10000) &&
+			 * Math.abs(ratio - targetRatio) < 0.1) { return size; }
+			 */
+
+			if (size.width > minWdith && size.height > minHeight) {
+
+				if (size.width < size_out.width
+						&& size.height < size_out.height) {
+					size_out = size;
+				}
+				bIsVailble = true;
+			}
+
+		}
+
+		if (bIsVailble) {
+			params.setPictureSize(size_out.width, size_out.height);
+		} else {
+			params.setPictureSize(sizes.get(0).width, sizes.get(0).height);
+		}
+
+		this.mCamera.setParameters(params);
+
+	}
 
 	@Override
 	protected void onResume() {

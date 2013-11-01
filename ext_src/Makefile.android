@@ -1,0 +1,25 @@
+include android.env
+
+.SUFFIXES:
+.SUFFIXES: .c .o
+
+CFLAGS += -fPIC -O2
+
+#Object files
+
+OBJS =	ext_test.o
+
+%.o : %.c %.h
+	${CC} ${CFLAGS} -c -o $@ $<
+
+staticlib = libtest.a
+
+${staticlib} : ${OBJS}
+	${AR} ruv $@ $^
+
+all : ${staticlib}
+	cp ${staticlib} ../lib
+
+
+clean :
+	rm -f *.o ${staticlib}
