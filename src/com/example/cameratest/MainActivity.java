@@ -1,11 +1,14 @@
 package com.example.cameratest;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
 import android.app.Activity;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PictureCallback;
@@ -42,7 +45,7 @@ public class MainActivity extends Activity {
 		addContentView(new CameraOnView(this), new LayoutParams(
 				LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT));
 
-		Button b = (Button) this.findViewById(R.id.button_capture);
+		Button b = (Button) this.findViewById(R.id.button_picture);
 		b.setOnClickListener(new View.OnClickListener() {
 
 			@Override
@@ -50,14 +53,27 @@ public class MainActivity extends Activity {
 				// TODO Auto-generated method stub
 				MainActivity parent = MainActivity.this;
 				Camera camera = parent.mCamera;
+				camera.takePicture(null, null, cb_picture);
+			}
+		});
+
+		Button b2 = (Button) this.findViewById(R.id.button_capture);
+		b2.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				MainActivity parent = MainActivity.this;
+				Camera camera = parent.mCamera;
+
 				if (parent.cb_set) {
 					camera.setPreviewCallback(null);
 					parent.cb_set = false;
 				} else {
-					camera.setPreviewCallback(parent.cb_preview);
+					camera.setPreviewCallback(parent.cb_preview2);
 					parent.cb_set = true;
 				}
-				// camera.takePicture(null, null, cb_picture);
+
 			}
 		});
 
@@ -156,6 +172,62 @@ public class MainActivity extends Activity {
 		}
 	};
 
+	private Camera.PreviewCallback cb_preview2 = new Camera.PreviewCallback() {
+		// @Override
+		public void onPreviewFrame(byte[] data, Camera camera) {
+			Log.v(TAG, "Preview ");
+
+			if (data != null) {
+
+				// rawデータをJPEGファイルに変換
+				camera.addCallbackBuffer(data);
+				Camera.Parameters params = camera.getParameters();
+				Camera.Size size = params.getPreviewSize();
+				YuvImage image = new YuvImage(data, params.getPreviewFormat(),
+						size.width, size.height, null);
+
+				File dir = new File(
+						Environment
+								.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+						"smart-ink");
+
+				if (!dir.exists()) {
+					if (!dir.mkdirs()) {
+						Toast.makeText(
+								MainActivity.this.getApplicationContext(),
+								"cannot make picture directory in SD card",
+								Toast.LENGTH_SHORT).show();
+						return;
+					}
+				}
+
+				String fname = System.currentTimeMillis() + ".jpg";
+				File file = new File(dir, fname);
+				FileOutputStream out = null;
+				try {
+					out = new FileOutputStream(file);
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				image.compressToJpeg(
+						new Rect(0, 0, image.getWidth(), image.getHeight()),
+						100, out);
+				try {
+					out.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			}
+
+			camera.startPreview();
+
+		}
+
+	};
+
 	private final PictureCallback cb_picture = new PictureCallback() {
 
 		@Override
@@ -171,6 +243,7 @@ public class MainActivity extends Activity {
 					Toast.makeText(MainActivity.this.getApplicationContext(),
 							"cannot make picture directory in SD card",
 							Toast.LENGTH_SHORT).show();
+					return;
 				}
 			}
 
@@ -182,6 +255,7 @@ public class MainActivity extends Activity {
 				fos = new FileOutputStream(file);
 				fos.write(imag);
 				fos.close();
+				Log.d(TAG, "saved file to " + file.toString());
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
