@@ -13,7 +13,8 @@ extern "C" {
  * Signature: ([B)I
  */
 JNIEXPORT jint JNICALL Java_com_example_cameratest_JNIMethods_startink
-  (JNIEnv *, jclass, jbyteArray);
+//  (JNIEnv *, jclass, jbyteArray);
+(JNIEnv * env, jobject obj, jintArray rgbOut, jbyteArray yuv420sp, jint width, jint height, jint rad);
 
 #ifdef __cplusplus
 }

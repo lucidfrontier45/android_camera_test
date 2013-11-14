@@ -4,9 +4,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
@@ -16,8 +21,10 @@ import android.hardware.Camera.PreviewCallback;
 import android.hardware.Camera.Size;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
@@ -32,8 +39,13 @@ public class MainActivity extends Activity {
 	private CameraPreview mPreview;
 	private boolean cb_set = false;
 	private TextView mResultTextView;
-
-	@Override
+	private int SAVE_SIZE = 512;
+	
+    private static final int DIMENSION = 3;
+    private float[] orientationValues = new float[DIMENSION];
+	//private native void smarkink(int[] rgb, byte[] yuv, int width, int height, int rad);
+   
+    @Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
@@ -161,7 +173,8 @@ public class MainActivity extends Activity {
 		public void onPreviewFrame(byte[] imag, Camera camera) {
 			// TODO Auto-generated method stub
 			Log.d(TAG, "cb_preview");
-			int ret = JNIMethods.startink(imag);
+		//	int ret = JNIMethods.startink(imag);
+			int ret = 1;
 			if (ret != 0) {
 				mResultTextView.setText("Captured!");
 				camera.setPreviewCallback(null);
@@ -178,14 +191,47 @@ public class MainActivity extends Activity {
 			Log.v(TAG, "Preview ");
 
 			if (data != null) {
-
-				// rawデータをJPEGファイルに変換
+				
+				///////////////////////////////////////////////////////////////////////////
+				// Rotation test  
+				//*///////////////////////////////////////////////////////////////////////
 				camera.addCallbackBuffer(data);
 				Camera.Parameters params = camera.getParameters();
-				Camera.Size size = params.getPreviewSize();
-				YuvImage image = new YuvImage(data, params.getPreviewFormat(),
-						size.width, size.height, null);
-
+				Camera.Size size = params.getPreviewSize();				
+				int width = size.width;
+				int height = size.height;
+				
+                // 画像データを回転する
+                int rad_y = radianToDegree(orientationValues[2]);
+                Matrix matrix = new Matrix();
+                if ((rad_y > -45 && rad_y <= 0) || (rad_y > 0 && rad_y <= 45)) {
+                   // matrix.setRotate(90);
+                	width = size.height;
+                	height = size.width;
+                } else if (rad_y > 45 && rad_y <= 135) {
+                   // matrix.setRotate(180);
+                	width = size.width;
+                	height = size.height;
+                } else if ((rad_y > 135 && rad_y <= 180) || (rad_y >= -180 && rad_y <= -135)) {
+                    //matrix.setRotate(-90);
+                	width = size.height;
+                	height = size.width;
+                } else if (rad_y > -135 && rad_y <= -45) {
+                    //matrix.setRotate(0);
+                	width = size.width;
+                	height = size.height;
+                }
+                
+            	width = size.width;
+            	height = size.height;
+				int[] rgb = new int[width * height + 1]; // ARGB8888の画素の配列
+               
+				JNIMethods.startink(rgb, data, size.width, size.height, rad_y);
+				//decodeYUV420SP(rgb, data, width, height);
+				
+				Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+				bitmap.setPixels(rgb, 0, width, 0, 0, width, height); 
+						   
 				File dir = new File(
 						Environment
 								.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
@@ -207,19 +253,136 @@ public class MainActivity extends Activity {
 				try {
 					out = new FileOutputStream(file);
 				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
+					// TODO Auto-generated catch block  
 					e.printStackTrace();
 				}
-				image.compressToJpeg(
-						new Rect(0, 0, image.getWidth(), image.getHeight()),
-						100, out);
+				
+				bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+				
 				try {
 					out.close();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				//////////////////////////////////////////////////////////////////////////////////*/
+				
+				///////////////////////////////////////////////////////////////////////////
+				// Rotation test (2) 
+				/*///////////////////////////////////////////////////////////////////////
+				camera.addCallbackBuffer(data);
+				Camera.Parameters params = camera.getParameters();
+				Camera.Size size = params.getPreviewSize();				
+				int width = size.width;
+				int height = size.height;
+				
+				 // データを生成する
+				int[] rgba = new int[width*height+1];
+				decodeYUV420SP(rgba, data, width, height);
+				Bitmap bitmap1 =  Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+				bitmap1.setPixels(rgba, 0, width, 0, 0, width, height);
 
+                // 画像データを回転する
+                int rad_y = radianToDegree(orientationValues[2]);
+                Matrix matrix = new Matrix();
+                if ((rad_y > -45 && rad_y <= 0) || (rad_y > 0 && rad_y <= 45)) {
+                    matrix.setRotate(90);
+                } else if (rad_y > 45 && rad_y <= 135) {
+                    matrix.setRotate(180);
+                } else if ((rad_y > 135 && rad_y <= 180) || (rad_y >= -180 && rad_y <= -135)) {
+                    matrix.setRotate(-90);
+                } else if (rad_y > -135 && rad_y <= -45) {
+                    matrix.setRotate(0);
+                }
+               
+                Bitmap bitmap = Bitmap.createBitmap(bitmap1, 0, 0, width, height, matrix, true);
+				   
+				File dir = new File(
+						Environment
+								.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+						"smart-ink");
+
+				if (!dir.exists()) {
+					if (!dir.mkdirs()) {
+						Toast.makeText(
+								MainActivity.this.getApplicationContext(),
+								"cannot make picture directory in SD card",
+								Toast.LENGTH_SHORT).show();
+						return;
+					}
+				}
+
+				String fname = System.currentTimeMillis() + ".jpg";
+				File file = new File(dir, fname);
+				FileOutputStream out = null;
+				try {
+					out = new FileOutputStream(file);
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block  
+					e.printStackTrace();
+				}
+				
+				bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+				
+				try {
+					out.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				//////////////////////////////////////////////////////////////////////////////////*/				
+				/////////////////////////////////////////////////////////////////////////////////////
+				// rawデータをJPEGファイルに変換
+				/*//////////////////////////////////////////////////////////////////////////////////
+				camera.addCallbackBuffer(data);
+				Camera.Parameters params = camera.getParameters();
+				Camera.Size size = params.getPreviewSize();
+				
+				YuvImage image = new YuvImage(data, params.getPreviewFormat(),
+						size.width, size.height, null);             
+                
+				File dir = new File(
+						Environment
+								.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+						"smart-ink");
+
+				if (!dir.exists()) {
+					if (!dir.mkdirs()) {
+						Toast.makeText(
+								MainActivity.this.getApplicationContext(),
+								"cannot make picture directory in SD card",
+								Toast.LENGTH_SHORT).show();
+						return;
+					}
+				}
+
+				String fname = System.currentTimeMillis() + ".jpg";
+				File file = new File(dir, fname);
+				FileOutputStream out = null;
+				try {
+					out = new FileOutputStream(file);
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block  
+					e.printStackTrace();
+				}
+				
+				int x1 = (image.getWidth()-SAVE_SIZE)/2;
+				int y1 = (image.getHeight()-SAVE_SIZE)/2;
+				int x2 = x1 + SAVE_SIZE;
+				int y2 = y1 + SAVE_SIZE;
+				
+				image.compressToJpeg(
+				//		new Rect(0, 0, image.getWidth(), image.getHeight()),
+						new Rect(x1, y1, x2, y2),
+						100, out);
+				 
+				try {
+					out.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				/////////////////////////////////////////////////////////////////////////////*/
 			}
 
 			camera.startPreview();
@@ -265,5 +428,34 @@ public class MainActivity extends Activity {
 		}
 
 	};
+    /**
+     * ラジアンで計測した角度を、相当する度に変換する
+     */
+    private int radianToDegree(float rad) {
+        return (int)Math.floor(Math.toDegrees(rad));
+    }
+    
+    public static final void decodeYUV420SP(int[] rgb, byte[] yuv420sp, int width, int height) {
+    	final int frameSize = width * height;
+    	for (int j = 0, yp = 0; j < height; j++) {
+    		int uvp = frameSize + (j >> 1) * width, u = 0, v = 0;
+    		for (int i = 0; i < width; i++, yp++) {
+    			int y = (0xff & ((int) yuv420sp[yp])) - 16;
+    			if (y < 0) y = 0;
+    			if ((i & 1) == 0) {
+    				v = (0xff & yuv420sp[uvp++]) - 128;
+    				u = (0xff & yuv420sp[uvp++]) - 128;
+    			}
+    			int y1192 = 1192 * y;
+    			int r = (y1192 + 1634 * v);
+    			int g = (y1192 - 833 * v - 400 * u);
+    			int b = (y1192 + 2066 * u);
+    			if (r < 0) r = 0; else if (r > 262143) r = 262143;
+    			if (g < 0) g = 0; else if (g > 262143) g = 262143;
+    			if (b < 0) b = 0; else if (b > 262143) b = 262143;
+    			rgb[yp] = 0xff000000 | ((r << 6) & 0xff0000) | ((g >> 2) & 0xff00) | ((b >> 10) & 0xff);
+    		}
+    	}
+    }
 
 }
