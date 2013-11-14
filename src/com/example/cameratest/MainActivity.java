@@ -203,6 +203,7 @@ public class MainActivity extends Activity {
 				
                 // 画像データを回転する
                 int rad_y = radianToDegree(orientationValues[2]);
+                //rad_y = 150;
                 Matrix matrix = new Matrix();
                 if ((rad_y > -45 && rad_y <= 0) || (rad_y > 0 && rad_y <= 45)) {
                    // matrix.setRotate(90);
@@ -222,8 +223,6 @@ public class MainActivity extends Activity {
                 	height = size.height;
                 }
                 
-            	width = size.width;
-            	height = size.height;
 				int[] rgb = new int[width * height + 1]; // ARGB8888の画素の配列
                
 				JNIMethods.startink(rgb, data, size.width, size.height, rad_y);
